@@ -32,11 +32,15 @@ class Dealer:
                           (6, 5)]
 
         self.auto = False
+        self.new_game = True
+        self.moves = 0
 
     def deal(self):
         return self._tableau.deal(self._stock.draw())
 
     def new_card(self):
+        self.new_game = False
+        self.moves += 1
         return self._stock.flip()
 
     def check_waste(self):
@@ -55,24 +59,27 @@ class Dealer:
         return self._stock.current
 
     def get_card_from_tableau(self, pos):
+        cells = self._tableau.cells
+
         if self.current:
             return self.current
-
-        cells = self._tableau.cells
 
         if pos:
             if pos not in self.face_down:
                 if cells[pos] != 0:
+
                     self.current = cells[pos]
                     self.current_pos = pos
                     self.set_tail(pos[0], pos[1])
                     return cells[pos]
+
             if cells[pos] == 0:
                 for i in range(8):
                     (x, y) = (pos[0], pos[1] - i)
                     if (x, y) in cells:
                         if (x, y) not in self.face_down:
                             if cells[(x, y)]:
+
                                 self.current = cells[(x, y)]
                                 self.current_pos = (x, y)
                                 self.set_tail(x, y)
@@ -86,17 +93,23 @@ class Dealer:
             success = self.misc_to_tableau(self.current, dest)
             if success:
                 self._stock.current = self._stock.waste.get_last()
+                self.new_game = False
+                self.moves += 1
                 return True
 
         elif origin == FOUNDATION:
             success = self.misc_to_tableau(self.current, dest)
             if success:
+                self.new_game = False
+                self.moves += 1
                 return True
 
         else:
             success = self.tableau_to_tableau(origin, dest)
             self.tail = []
             if success:
+                self.new_game = False
+                self.moves += 1
                 if (origin[0], origin[1] - 1) in self.face_down:
                     self.face_down.remove((origin[0], origin[1] - 1))
                 self.current = None
@@ -121,7 +134,7 @@ class Dealer:
                                 if t.check_move(c, t.cells[(x, y - i)]):
                                     t.cells[(x, y - i + 1)] = c
                                     self.tail = self.move_tail(origin, (x, y - i + 2))
-                                    return True, i
+                                    return True, (x, y - i + 1)
                                 else:
                                     return False
 
@@ -132,7 +145,7 @@ class Dealer:
                                 t.cells[(x, y - i + 1)] = c
                                 t.cells[origin] = 0
                                 self.tail = self.move_tail(origin, (x, y - i + 2))
-                                return True, i
+                                return True, (x, y - i + 1)
         return False
 
     def misc_to_tableau(self, c: Card, dest: (int, int)):
@@ -168,18 +181,20 @@ class Dealer:
         self.current = self._foundation.pop(idx)
         return self.current
 
-    def return_to_foundation(self, card):
-        self._foundation.add(card)
-
     def insert_into_foundation(self, card, origin):
         if len(self.tail) < 1:
             if self._foundation.check_insert(card):
-                if origin == CURRENT_STOCK:
+                self.new_game = False
+                self.moves += 1
+                if origin == FOUNDATION:
+                    pass
+                elif origin == CURRENT_STOCK:
                     self._stock.current = self._stock.waste.get_last()
                 else:
                     self._tableau.cells[origin] = 0
                     if (origin[0], origin[1] - 1) in self.face_down:
                         self.face_down.remove((origin[0], origin[1] - 1))
+
                 return True
         return False
 
@@ -201,6 +216,7 @@ class Dealer:
                     self.tail.append((cells[(x, i)], (x, i)))
         return self.tail
 
+    # Starts with card below moved position*
     def move_tail(self, pos, dest):
         cells = self._tableau.cells
         arr = []
@@ -248,6 +264,9 @@ class Dealer:
                 else:
                     continue
         return False
+
+    def check_win(self):
+        return self._foundation.check_win()
 
     @property
     def deck(self):

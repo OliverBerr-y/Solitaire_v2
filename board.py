@@ -45,15 +45,19 @@ class Foundation:
         self._stacks = {'diamonds': CardStack(), 'hearts': CardStack(),
                         'clubs': CardStack(), 'spades': CardStack()}
         self._order = []
+        self._last = []
 
     # Adds card to the appropriate stack
     # based on its suit
     def add(self, card):
         self._stacks[card.suit].add(card)
+        self._last.append(card.suit)
 
     # Removes and returns the top card from the selected stack
     def pop(self, idx: int):
-        return self._stacks[self._order[idx]].get_top()
+        stack = self._stacks[self._order[idx]]
+        card = stack.get_top()
+        return card
 
     # Returns a list of all the currently visible Foundation cards.
     # Does not remove cards from Foundation
@@ -80,13 +84,21 @@ class Foundation:
 
     def check_win(self):
         for suit in self._stacks.values():
-            if suit.height > suit.max_height:
+            if suit.height < suit.max_height:
                 return False
         return True
 
     @property
     def stacks(self):
         return self._stacks
+
+    @property
+    def last(self):
+        return self._last
+
+    @property
+    def order(self):
+        return self._order
 
 
 class CardStack:
