@@ -87,7 +87,9 @@ def display_win(dealer, hand, click, drop, area, cell, timer):
     elif d.stock_is_empty():
         WIN.blit(BUTTON_RECYCLE, (STOCK_AREA[0] + 16, STOCK_AREA[1] + 30))
     else:
-        WIN.blit(CARD_BACK, STOCK_AREA)
+        for n, card in enumerate(d.get_stock()):
+            if n <= 8:
+                WIN.blit(CARD_BACK, (STOCK_AREA[0] + n, STOCK_AREA[1] - n))
 
     # Display waste pile (top/current)
     if d.check_waste():
@@ -100,11 +102,9 @@ def display_win(dealer, hand, click, drop, area, cell, timer):
 
     # Display foundation
     x_pos = 30
-    count = 0
-    for card in d.get_current_foundation():
+    for count, card in enumerate(d.get_current_foundation()):
         if count != 0:
             x_pos += 70
-        count += 1
         if card:
             surf = d.deck.card_img[card]
             WIN.blit(surf, (x_pos, 40))
@@ -153,6 +153,11 @@ def display_win(dealer, hand, click, drop, area, cell, timer):
                 # Will activated auto complete function
                 d.auto = True
             else:
+                if d.stock_is_empty():
+                    pg.mixer.Sound(path.join('Assets', 'sfx_recycle.wav')).play()
+                else:
+                    pass
+
                 # Draws new card
                 c = d.new_card()
                 if c:
@@ -195,15 +200,24 @@ def display_win(dealer, hand, click, drop, area, cell, timer):
     elif drop:
         if area == FOUNDATION:
             if d.current:
-                d.insert_into_foundation(d.current, d.current_pos)
+                success = d.insert_into_foundation(d.current, d.current_pos)
+                if success:
+                    pg.mixer.Sound(path.join('Assets', 'sfx_insert.wav')).play()
+                else:
+                    pg.mixer.Sound(path.join('Assets', 'sfx_error.wav')).play()
 
         elif area == TABLEAU:
             success = d.move_to_tableau(d.current_pos, cell)
-            if d.current_pos == FOUNDATION and not success:
+            if success:
+                # pg.mixer.Sound(path.join('Assets', 'click2.wav')).play()
+                pass
+            elif d.current_pos == FOUNDATION:
                 d.insert_into_foundation(d.current, d.current_pos)
+                pg.mixer.Sound(path.join('Assets', 'sfx_error.wav')).play()
 
         elif d.current_pos == FOUNDATION:
             d.insert_into_foundation(d.current, d.current_pos)
+            pg.mixer.Sound(path.join('Assets', 'sxf_insert.wav')).play()
 
         d.current = None
         d.current_pos = None
@@ -282,6 +296,7 @@ def main():
 
             if event.type == pg.KEYDOWN:
                 if event.key == pg.K_n:
+                    pg.mixer.Sound(path.join('Assets', 'sfx_new_game.wav')).play()
                     dealer = Dealer()
                     hand = dealer.deal()
                     dealer.new_game = True

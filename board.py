@@ -3,18 +3,17 @@ from playing_cards import Card
 
 class Tableau:
     def __init__(self):
-        self._max_rows = 28
-        self._cols = 7
-
+        self._max_rows = range(28)
+        self._cols = range(7)
         self._cells: dict = {}
 
         # Generate tableau coordinates
-        for col in range(self._cols):
-            for row in range(self._max_rows):
-                self._cells[(col, row)] = 0
+        self._cells = {(col, row): 0
+                       for col in self._cols
+                       for row in self._max_rows}
 
     def deal(self, cards: list):
-        for col in range(self._cols):
+        for col in self._cols:
             for row in range(col + 1):
                 self._cells[(col, row)] = (cards.pop())
 
@@ -35,6 +34,10 @@ class Tableau:
     @property
     def cells(self):
         return self._cells
+
+    @property
+    def max_rows(self):
+        return self._max_rows
 
 
 # The Foundation contains four stacks of cards (each starting empty).
@@ -140,10 +143,10 @@ class Stock:
 
     # Draw a starting hand of 28 cards
     # this hand is then used to set the tableau
-    def draw(self):
+    def draw(self, n):
         hand = []
 
-        for i in range(28):
+        for i in range(n):
             c = self._cards.cards.pop()
             hand.append(c)
 
@@ -235,5 +238,3 @@ class Waste:
     @height.setter
     def height(self, value):
         self._height = value
-
-

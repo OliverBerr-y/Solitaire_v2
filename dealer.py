@@ -11,7 +11,7 @@ AUTO_FLIP_CHECK = [(1, 0), (2, 0), (3, 0),
                    (4, 0), (5, 0), (6, 0)]
 
 
-# Handles gui.py and board.py interactions
+# Handles solitaire.py and board.py interactions
 class Dealer:
     def __init__(self):
         self._deck = Deck()
@@ -23,23 +23,21 @@ class Dealer:
 
         self.current = None
         self.current_pos = None
-        self.tail = []
-        self.face_down = [(1, 0), (2, 0), (3, 0), (4, 0), (5, 0), (6, 0),
-                          (2, 1), (3, 1), (4, 1), (5, 1), (6, 1),
-                          (3, 2), (4, 2), (5, 2), (6, 2),
-                          (4, 3), (5, 3), (6, 3),
-                          (5, 4), (6, 4),
-                          (6, 5)]
-
-        self.auto = False
         self.new_game = True
+        self.auto = False
         self.moves = 0
+        self.tail = []
+
+        self.face_down = [(x, y)
+                          for x in range(1, 7)
+                          for y in range(x)]
 
     def deal(self):
-        return self._tableau.deal(self._stock.draw())
+        return self._tableau.deal(self._stock.draw(28))
 
     def new_card(self):
-        self.new_game = False
+        if self.new_game:
+            self.new_game = False
         self.moves += 1
         return self._stock.flip()
 
@@ -48,6 +46,9 @@ class Dealer:
 
     def stock_is_empty(self):
         return self._stock.is_empty()
+
+    def get_stock(self):
+        return self._stock.cards.cards
 
     def look_current_stock(self):
         return self._stock.current
@@ -67,7 +68,6 @@ class Dealer:
         if pos:
             if pos not in self.face_down:
                 if cells[pos] != 0:
-
                     self.current = cells[pos]
                     self.current_pos = pos
                     self.set_tail(pos[0], pos[1])
@@ -79,7 +79,6 @@ class Dealer:
                     if (x, y) in cells:
                         if (x, y) not in self.face_down:
                             if cells[(x, y)]:
-
                                 self.current = cells[(x, y)]
                                 self.current_pos = (x, y)
                                 self.set_tail(x, y)
@@ -121,15 +120,14 @@ class Dealer:
         t = self._tableau
 
         if dest:
-            x = dest[0]
-            y = dest[1]
+            x, y = dest
 
-            if origin in t.cells.keys():
+            if origin in t.cells:
                 c = t.cells[origin]
 
-                if dest in t.cells.keys() and t.cells[x, y + 1] == 0:
+                if dest in t.cells and t.cells[x, y + 1] == 0:
                     for i in range(8):
-                        if (x, y - i) in t.cells.keys() and (x, y - i + 1) != origin:
+                        if (x, y - i) in t.cells and (x, y - i + 1) != origin:
                             if t.cells[(x, y - i)] != 0 and (x, y - i) not in self.face_down:
                                 if t.check_move(c, t.cells[(x, y - i)]):
                                     t.cells[(x, y - i + 1)] = c
@@ -138,10 +136,10 @@ class Dealer:
                                 else:
                                     return False
 
-                if c and dest in t.cells.keys():
+                if c and dest in t.cells:
                     if c.rank == 13 and t.cells[x, 0] == 0:
                         for i in range(8):
-                            if (x, y - i) not in t.cells.keys():
+                            if (x, y - i) not in t.cells:
                                 t.cells[(x, y - i + 1)] = c
                                 t.cells[origin] = 0
                                 self.tail = self.move_tail(origin, (x, y - i + 2))
@@ -152,10 +150,9 @@ class Dealer:
         t = self._tableau
 
         if dest:
-            x = dest[0]
-            y = dest[1]
+            x, y = dest
 
-            if dest in t.cells.keys() and t.cells[x, y + 1] == 0:
+            if dest in t.cells and t.cells[x, y + 1] == 0:
                 for i in range(8):
                     if (x, y - i) in t.cells:
                         if t.cells[(x, y - i)] != 0:
@@ -165,10 +162,10 @@ class Dealer:
                             else:
                                 return False
 
-            if dest in t.cells.keys():
+            if dest in t.cells:
                 if c.rank == 13 and t.cells[x, 0] == 0:
                     for i in range(8):
-                        if (x, y - i) not in t.cells.keys():
+                        if (x, y - i) not in t.cells:
                             t.cells[x, y - i + 1] = c
                             return True, i
         return False
@@ -211,7 +208,7 @@ class Dealer:
         self.tail = []
 
         for i in range(y, 20):
-            if (x, i) in cells.keys():
+            if (x, i) in cells:
                 if cells[(x, i)] and i != y:
                     self.tail.append((cells[(x, i)], (x, i)))
         return self.tail
@@ -256,7 +253,7 @@ class Dealer:
             if self.get_current_stock():
                 self.insert_into_foundation(self.get_current_stock(), self.current_pos)
 
-            if pos in t.cells.keys() and \
+            if pos in t.cells and \
                     len(self.set_tail(pos[0], pos[1])) == 0:
                 if self.insert_into_foundation(t.cells[pos], pos):
                     t.cells[pos] = 0
