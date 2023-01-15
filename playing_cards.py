@@ -36,7 +36,7 @@ class Deck:
         # Generates a standard deck of 52 playing cards
         self._cards = [Card(suit, rank)
                        for suit in self._suits
-                       for rank in range(1, 13)]
+                       for rank in range(1, 14)]
 
         # Loads and stores the front side images of each card
         # in a dict as a pygame surface.

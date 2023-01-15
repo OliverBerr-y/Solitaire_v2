@@ -44,6 +44,9 @@ class Dealer:
     def check_waste(self):
         return self._stock.waste.height >= 1
 
+    def get_waste(self):
+        return self._stock.waste.stack
+
     def stock_is_empty(self):
         return self._stock.is_empty()
 
@@ -170,10 +173,10 @@ class Dealer:
                             return True, i
         return False
 
-    def get_current_foundation(self):
+    def current_foundation(self):
         return self._foundation.look_top_cards()
 
-    def get_card_from_foundation(self, idx: int):
+    def get_card_foundation(self, idx: int):
         self.current_pos = FOUNDATION
         self.current = self._foundation.pop(idx)
         return self.current
@@ -237,7 +240,7 @@ class Dealer:
                 return True
         return False
 
-    def check_winnable(self):
+    def check_auto_complete(self):
         if self.stock_is_empty() and \
                 self._stock.waste.height == 0:
             for pos in AUTO_FLIP_CHECK:
