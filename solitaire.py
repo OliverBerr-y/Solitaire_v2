@@ -378,3 +378,6 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+
+# <a href="https://www.flaticon.com/free-icons/solitaire" title="solitaire icons">Solitaire icons created by Febrian Hidayat - Flaticon</a>
