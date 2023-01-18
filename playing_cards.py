@@ -9,7 +9,7 @@ class Card:
         self._rank = rank
         self._color = 'black' if suit == 'spades' \
                       or suit == 'clubs' \
-                      else 'red'
+            else 'red'
 
     @property
     def color(self):
@@ -44,6 +44,10 @@ class Deck:
             c = self.load_card(card)
             if c:
                 self.card_img[c[1]] = c[0]
+
+        # Card back image
+        self.card_back_img = pg.image.load(path.join('Assets', 'back.png'))
+        self.card_back = pg.transform.rotate(self.card_back_img, 0)
 
     @staticmethod
     def load_hand(cards: dict):

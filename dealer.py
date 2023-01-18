@@ -1,14 +1,12 @@
 from playing_cards import Deck, Card
-from board import Tableau, Stock, Foundation
+from board import Tableau, Stock, Foundation, \
+    T_COLS, T_ROWS
 
-# String Constants
+# Constants
 CURRENT_STOCK = 'current_stock'
 FOUNDATION = 'foundation'
 TABLEAU = 'tableau'
 STOCK = 'stock'
-
-AUTO_FLIP_CHECK = [(1, 0), (2, 0), (3, 0),
-                   (4, 0), (5, 0), (6, 0)]
 
 
 # Handles solitaire.py and board.py interactions
@@ -17,20 +15,24 @@ class Dealer:
         self._deck = Deck()
         self._deck.shuffle()
 
+        self.new_game = True
+        self.auto = False
+        self.moves = 0
+
+        # Board positions
         self._foundation = Foundation()
         self._tableau = Tableau()
         self._stock = Stock(self._deck)
 
-        self.current = None
-        self.current_pos = None
-        self.new_game = True
-        self.auto = False
-        self.moves = 0
-        self.tail = []
-
+        # Contains initial face-down positions
         self.face_down = [(x, y)
                           for x in range(1, 7)
                           for y in range(x)]
+
+        # Currently held card
+        self.holding = None
+        self.origin = None
+        self.tail = []
 
     def deal(self):
         return self._tableau.deal(self._stock.draw(28))
@@ -58,147 +60,130 @@ class Dealer:
 
     def get_current_stock(self):
         if self._stock.current:
-            self.current = self._stock.current
-            self.current_pos = CURRENT_STOCK
+            self.holding = self._stock.current
+            self.origin = CURRENT_STOCK
         return self._stock.current
 
-    def get_card_from_tableau(self, pos):
+    def get_card_tableau(self, pos):
         cells = self._tableau.cells
 
-        if self.current:
-            return self.current
+        if pos and pos not in self.face_down:
+            self.holding = cells[pos]
+            self.origin = pos
+            self.set_tail(pos[0], pos[1])
+            return cells[pos]
 
-        if pos:
-            if pos not in self.face_down:
-                if cells[pos] != 0:
-                    self.current = cells[pos]
-                    self.current_pos = pos
-                    self.set_tail(pos[0], pos[1])
-                    return cells[pos]
-
-            if cells[pos] == 0:
-                for i in range(8):
-                    (x, y) = (pos[0], pos[1] - i)
-                    if (x, y) in cells:
-                        if (x, y) not in self.face_down:
-                            if cells[(x, y)]:
-                                self.current = cells[(x, y)]
-                                self.current_pos = (x, y)
-                                self.set_tail(x, y)
-                                return cells[(x, y)]
-        self.current = None
-        self.current_pos = None
+        self.holding = None
+        self.origin = None
         return False
 
-    def move_to_tableau(self, origin, dest):
-        if origin == CURRENT_STOCK:
-            success = self.misc_to_tableau(self.current, dest)
+    def in_cells(self, pos):
+        if pos in self._tableau.cells:
+            if self._tableau.cells[pos] != 0:
+                return True
+        return False
+
+    def insert_tableau(self, origin, dest):
+        if origin == FOUNDATION:
+            success = self.move_from_alt(self.holding, dest)
+
+        elif origin == CURRENT_STOCK:
+            success = self.move_from_alt(self.holding, dest)
             if success:
                 self._stock.current = self._stock.waste.get_last()
-                self.new_game = False
-                self.moves += 1
-                return True
 
-        elif origin == FOUNDATION:
-            success = self.misc_to_tableau(self.current, dest)
+        else:  # origin == TABLEAU:
+            success = self.move_from_tableau(origin, dest)
             if success:
-                self.new_game = False
-                self.moves += 1
-                return True
-
-        else:
-            success = self.tableau_to_tableau(origin, dest)
-            self.tail = []
-            if success:
-                self.new_game = False
-                self.moves += 1
+                self.tail = []
                 if (origin[0], origin[1] - 1) in self.face_down:
                     self.face_down.remove((origin[0], origin[1] - 1))
-                self.current = None
-                self.current_pos = None
-                return True
+
+        if success:
+            self.new_game = False
+            self.moves += 1
+            return True
         return False
 
-    def tableau_to_tableau(self, origin: (int, int), dest: (int, int)):
+    def move_from_tableau(self, origin: (int, int), drop_pos: (int, int)):
         t = self._tableau
 
-        if dest:
-            x, y = dest
+        if drop_pos:
+            dest = (drop_pos[0], drop_pos[1] + 1)
 
             if origin in t.cells:
                 c = t.cells[origin]
 
-                if dest in t.cells and t.cells[x, y + 1] == 0:
-                    for i in range(8):
-                        if (x, y - i) in t.cells and (x, y - i + 1) != origin:
-                            if t.cells[(x, y - i)] != 0 and (x, y - i) not in self.face_down:
-                                if t.check_move(c, t.cells[(x, y - i)]):
-                                    t.cells[(x, y - i + 1)] = c
-                                    self.tail = self.move_tail(origin, (x, y - i + 2))
-                                    return True, (x, y - i + 1)
-                                else:
-                                    return False
-
-                if c and dest in t.cells:
-                    if c.rank == 13 and t.cells[x, 0] == 0:
-                        for i in range(8):
-                            if (x, y - i) not in t.cells:
-                                t.cells[(x, y - i + 1)] = c
+                if drop_pos in t.cells:
+                    if t.cells[drop_pos] and t.cells[dest] == 0:
+                        if dest != origin:
+                            if t.check_move(c, t.cells[drop_pos]):
+                                t.cells[dest] = c
                                 t.cells[origin] = 0
-                                self.tail = self.move_tail(origin, (x, y - i + 2))
-                                return True, (x, y - i + 1)
-        return False
-
-    def misc_to_tableau(self, c: Card, dest: (int, int)):
-        t = self._tableau
-
-        if dest:
-            x, y = dest
-
-            if dest in t.cells and t.cells[x, y + 1] == 0:
-                for i in range(8):
-                    if (x, y - i) in t.cells:
-                        if t.cells[(x, y - i)] != 0:
-                            if t.check_move(c, t.cells[(x, y - i)]):
-                                t.cells[(x, y - i + 1)] = c
-                                return True, i
+                                self.tail = self.move_tail(origin, dest)
+                                return True
                             else:
                                 return False
 
-            if dest in t.cells:
-                if c.rank == 13 and t.cells[x, 0] == 0:
-                    for i in range(8):
-                        if (x, y - i) not in t.cells:
-                            t.cells[x, y - i + 1] = c
-                            return True, i
+                elif c and dest in t.cells:
+                    if c.rank == 13 and t.cells[drop_pos[0], 0] == 0:
+                        t.cells[dest] = c
+                        t.cells[origin] = 0
+                        self.tail = self.move_tail(origin, dest)
+                        return True
+        return False
+
+    def move_from_alt(self, c: Card, drop_pos: (int, int)):
+        t = self._tableau
+
+        if drop_pos:
+            dest = (drop_pos[0], drop_pos[1] + 1)
+
+            if drop_pos in t.cells:
+                if t.cells[drop_pos] and t.cells[dest] == 0:
+                    if t.check_move(c, t.cells[drop_pos]):
+                        t.cells[dest] = c
+                        return True
+                    else:
+                        return False
+
+            elif dest in t.cells:
+                if c.rank == 13 and t.cells[drop_pos[0], 0] == 0:
+                    t.cells[dest] = c
+                    return True
         return False
 
     def current_foundation(self):
         return self._foundation.look_top_cards()
 
     def get_card_foundation(self, idx: int):
-        self.current_pos = FOUNDATION
-        self.current = self._foundation.pop(idx)
-        return self.current
+        self.origin = FOUNDATION
+        self.holding = self._foundation.pop(idx)
+        return self.holding
 
-    def insert_into_foundation(self, card, origin):
+    def insert_foundation(self, card, origin):
+        self.holding = None
+        self.origin = None
+
         if len(self.tail) < 1:
-            if self._foundation.check_insert(card):
+            if self._foundation.add(card):
                 self.new_game = False
                 self.moves += 1
+
                 if origin == FOUNDATION:
                     pass
+
                 elif origin == CURRENT_STOCK:
                     self._stock.current = self._stock.waste.get_last()
+
                 else:
                     self._tableau.cells[origin] = 0
                     if (origin[0], origin[1] - 1) in self.face_down:
                         self.face_down.remove((origin[0], origin[1] - 1))
-
                 return True
         return False
 
-    def get_cards_tail(self):
+    def get_card_tail(self):
         arr = []
         if len(self.tail) > 0:
             for n in range(len(self.tail)):
@@ -206,7 +191,7 @@ class Dealer:
             return arr
         return False
 
-    def set_tail(self, x, y):
+    def set_tail(self, x, y):  # **
         cells = self._tableau.cells
         self.tail = []
 
@@ -216,22 +201,16 @@ class Dealer:
                     self.tail.append((cells[(x, i)], (x, i)))
         return self.tail
 
-    # Starts with card below moved position*
-    def move_tail(self, pos, dest):
+    def move_tail(self, origin, dest):
         cells = self._tableau.cells
+
         arr = []
+        for i, card in enumerate(self.tail, 1):
+            cells[dest[0], dest[1] + i] = (card[0])
+            cells[origin[0], origin[1] + i] = 0
 
-        count = 0
-        for card in self.tail:
-            x = dest[0], dest[1] + count
-            y = pos[0], pos[1] + count
-            cells[x] = (card[0])
-            cells[y] = 0
-            arr.append(x)
-            count += 1
+            arr.append((dest[0], dest[1] + i))
 
-        y = pos[0], pos[1] + count
-        cells[y] = 0
         return arr
 
     def in_tail(self, pos):
@@ -243,7 +222,7 @@ class Dealer:
     def check_auto_complete(self):
         if self.stock_is_empty() and \
                 self._stock.waste.height == 0:
-            for pos in AUTO_FLIP_CHECK:
+            for pos in [(x, 0) for x in range(1, 7)]:
                 if pos in self.face_down:
                     return False
             return True
@@ -254,11 +233,11 @@ class Dealer:
         for card, pos in remaining:
 
             if self.get_current_stock():
-                self.insert_into_foundation(self.get_current_stock(), self.current_pos)
+                self.insert_foundation(self.get_current_stock(), self.origin)
 
             if pos in t.cells and \
                     len(self.set_tail(pos[0], pos[1])) == 0:
-                if self.insert_into_foundation(t.cells[pos], pos):
+                if self.insert_foundation(t.cells[pos], pos):
                     t.cells[pos] = 0
                     return card
                 else:

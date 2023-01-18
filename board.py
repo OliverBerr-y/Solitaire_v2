@@ -1,19 +1,20 @@
 from playing_cards import Card
 
+T_ROWS = range(28)
+T_COLS = range(7)
+
 
 class Tableau:
     def __init__(self):
-        self._max_rows = range(28)
-        self._cols = range(7)
         self._cells: dict = {}
 
         # Generate tableau coordinates
         self._cells = {(col, row): 0
-                       for col in self._cols
-                       for row in self._max_rows}
+                       for col in T_COLS
+                       for row in T_ROWS}
 
     def deal(self, cards: list):
-        for col in self._cols:
+        for col in T_COLS:
             for row in range(col + 1):
                 self._cells[(col, row)] = (cards.pop())
 
@@ -22,11 +23,13 @@ class Tableau:
             return False
         return self._cells
 
+    # Compares first card against destination card
+    # returning true if move is valid
     @staticmethod
-    def check_move(card_x: Card, card_y: Card):
-        if card_x.color == card_y.color:
+    def check_move(card_1: Card, card_2: Card):
+        if card_1.color == card_2.color:
             return False
-        if card_x.rank != card_y.rank - 1:
+        if card_1.rank != card_2.rank - 1:
             return False
         else:
             return True
@@ -34,10 +37,6 @@ class Tableau:
     @property
     def cells(self):
         return self._cells
-
-    @property
-    def max_rows(self):
-        return self._max_rows
 
 
 # The Foundation contains four stacks of cards (each starting empty).
@@ -48,21 +47,15 @@ class Foundation:
         self._stacks = {'diamonds': CardStack(), 'hearts': CardStack(),
                         'clubs': CardStack(), 'spades': CardStack()}
         self._order = []
-        self._last = []
 
-    # Adds card to the appropriate stack
-    # based on its suit
-    def add(self, card):
-        self._stacks[card.suit].add(card)
-        self._last.append(card.suit)
-
-    # Removes and returns the top card from the selected stack
+    # Removes and returns the top card
+    # from the selected foundation stack
     def pop(self, idx: int):
         stack = self._stacks[self._order[idx]]
         card = stack.get_top()
         return card
 
-    # Returns a list of all the currently visible Foundation cards.
+    # Returns a list of all visible Foundation cards.
     # Does not remove cards from Foundation
     def look_top_cards(self):
         x = []
@@ -70,10 +63,15 @@ class Foundation:
             x.append(self.stacks[suit].look_top())
         return x
 
-    def check_insert(self, card):
+    # Adds card to the appropriate stack
+    # based on its suit
+    def _add(self, card):
+        self._stacks[card.suit].add(card)
+
+    def add(self, card):
         if card:
             if card.rank == 1:
-                self.add(card)
+                self._add(card)
                 if card.suit not in self._order:
                     self._order.append(card.suit)
                 return True
@@ -81,7 +79,7 @@ class Foundation:
                 top = self._stacks[card.suit].look_top()
                 if top:
                     if card.rank == top.rank + 1:
-                        self.add(card)
+                        self._add(card)
                         return True
         return False
 
@@ -94,10 +92,6 @@ class Foundation:
     @property
     def stacks(self):
         return self._stacks
-
-    @property
-    def last(self):
-        return self._last
 
     @property
     def order(self):
@@ -207,7 +201,7 @@ class Stock:
 
 
 # The Waste pile is held by the stock pile and contains all the
-# cards that that the player has previously flipped and not played.
+# cards that the player has previously flipped and not played.
 # Cards are recycled into a new Stock pile once stock is empty.
 class Waste:
     def __init__(self):

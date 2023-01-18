@@ -4,98 +4,110 @@ import pygame as pg
 from pygame.locals import *
 
 from dealer import Dealer, TABLEAU, STOCK, \
-    FOUNDATION, CURRENT_STOCK
+    FOUNDATION, CURRENT_STOCK, T_COLS, T_ROWS
+
+# --------------------------------------------------- CONSTANTS ----------------------------------------------------
+WINDOW_CAPTION = 'Solitaire'
+COLOR_BG2 = '#007000'
+COLOR_BG = '#008000'
+T_COLOR = '#EEFFEE'
+FONT = 'COURIER'
 
 WIN_WIDTH = 543
 WIN_HEIGHT = 470
-MAX_STACK_HEIGHT = 5
-WIN = pg.display.set_mode((WIN_WIDTH, WIN_HEIGHT))
-pg.display.set_caption('Solitaire')
+CARD_WIDTH = 63
+CARD_HEIGHT = 90
+STACK_LIMIT = 5
+TEXT_SIZE = 17
+LEFT_MARGIN = 30
+TOP_MARGIN = 40
+
 pg.init()
+WIN = pg.display.set_mode((WIN_WIDTH, WIN_HEIGHT))
+pg.display.set_caption(WINDOW_CAPTION)
+LB = pg.font.SysFont(FONT, TEXT_SIZE)
 
-# Label font/color/size
-FONT = pg.font.SysFont('COURIER', 17)
-T_COLOR = '#EEFFEE'
+# Board Areas
+AREA_CURRENT_STOCK = pg.Rect(380, TOP_MARGIN, CARD_WIDTH, CARD_HEIGHT)
+AREA_STOCK = pg.Rect(450, TOP_MARGIN, CARD_WIDTH, CARD_HEIGHT)
+AREA_WASTE = pg.Rect(379, TOP_MARGIN, CARD_WIDTH, CARD_HEIGHT)
+AREA_TABLEAU = pg.Rect(LEFT_MARGIN, 150, 483, 300)
+AREA_FOUNDATION = pg.Rect(0, 0, 350, 150)
+AREA_SOUND = pg.Rect(520, 448, 15, 15)
+AREA_MOVES_LB = (150, 12, 50, 50)
 
-# Board divisions
-CURRENT_STOCK_AREA = pg.Rect(380, 40, 63, 90)
-FOUNDATION_AREA = pg.Rect(0, 0, 350, 150)
-TABLEAU_AREA = pg.Rect(30, 150, 483, 300)
-STOCK_AREA = pg.Rect(450, 40, 63, 90)
-WASTE_AREA = pg.Rect(379, 40, 63, 90)
-SOUND_AREA = pg.Rect(520, 448, 15, 15)
+# Foundation positions
+T4 = pg.Rect(LEFT_MARGIN + (70 * 3), TOP_MARGIN, CARD_WIDTH, CARD_HEIGHT)
+T3 = pg.Rect(LEFT_MARGIN + (70 * 2), TOP_MARGIN, CARD_WIDTH, CARD_HEIGHT)
+T2 = pg.Rect(LEFT_MARGIN + 70, TOP_MARGIN, CARD_WIDTH, CARD_HEIGHT)
+T1 = pg.Rect(LEFT_MARGIN, TOP_MARGIN, CARD_WIDTH, CARD_HEIGHT)
 
-# Foundation card positions
-T4 = pg.Rect(239, 40, 63, 90)
-T3 = pg.Rect(169, 40, 63, 90)
-T2 = pg.Rect(100, 40, 63, 90)
-T1 = pg.Rect(30, 40, 63, 90)
+# Button images
+BTN_AUTO = pg.image.load(path.join('Assets', 'img_auto.png'))
+BTN_INFO = pg.image.load(path.join('Assets', 'img_info.png'))
+BTN_RESTOCK = pg.image.load(path.join('Assets', 'img_recycle.png'))
+BTN_SOUND_ON = pg.image.load(path.join('Assets', 'img_sound_on.png'))
+BTN_SOUND_OFF = pg.image.load(path.join('Assets', 'img_sound_off.png'))
 
-# Card back img
-CARD_BACK_IMG = pg.image.load(path.join('Assets', 'back.png'))
-CARD_BACK = pg.transform.rotate(CARD_BACK_IMG, 0)
-
-# Button img
-BTN_AUTO = pg.image.load(path.join('Assets', 'auto-complete.png'))
-BTN_RESTOCK = pg.image.load(path.join('Assets', 'recycle.png'))
-BTN_SOUND_ON = pg.image.load(path.join('Assets', 'sound_on.png'))
-BTN_SOUND_OFF = pg.image.load(path.join('Assets', 'sound_off.png'))
-BTN_INFO = pg.image.load(path.join('Assets', 'info.png'))
-
-BTN_AUTO_POS = (STOCK_AREA[0] + 4, STOCK_AREA[1] + 25)
-BTN_RESTOCK_POS = (STOCK_AREA[0] + 16, STOCK_AREA[1] + 30)
+# Button positions
+BTN_AUTO_POS = (AREA_STOCK[0] + 4, AREA_STOCK[1] + 25)
+BTN_RESTOCK_POS = (AREA_STOCK[0] + 16, AREA_STOCK[1] + 30)
 BTN_SOUND_ON_POS = (520, 448)
 BTN_SOUND_OFF_POS = (520, 448)
 
-# Sound effects
-SFX_MOVE = pg.mixer.Sound(path.join('Assets', 'click2.wav'))
-SFX_RESTOCK = pg.mixer.Sound(path.join('Assets', 'sfx_recycle.wav'))
-SFX_INSERT = pg.mixer.Sound(path.join('Assets', 'sfx_insert.wav'))
+# Load Sound effects
+SFX_MOVE = pg.mixer.Sound(path.join('Assets', 'sfx_move.wav'))
 SFX_ERROR = pg.mixer.Sound(path.join('Assets', 'sfx_error.wav'))
+SFX_INSERT = pg.mixer.Sound(path.join('Assets', 'sfx_insert.wav'))
+SFX_RESTOCK = pg.mixer.Sound(path.join('Assets', 'sfx_recycle.wav'))
 SFX_NEW_GAME = pg.mixer.Sound(path.join('Assets', 'sfx_new_game.wav'))
 
-# SFX volume
-SFX_MOVE.set_volume(0.3)
-SFX_RESTOCK.set_volume(0.2)
-SFX_INSERT.set_volume(0.5)
-SFX_ERROR.set_volume(0.6)
-SFX_NEW_GAME.set_volume(0.5)
+# Set sfx volume
+SFX_MOVE.set_volume(0.5)
+SFX_RESTOCK.set_volume(0.5)
+SFX_INSERT.set_volume(1)
+SFX_ERROR.set_volume(1)
+SFX_NEW_GAME.set_volume(0.7)
 
-# Tableau card positions
-TABS = {}
-T_HEIGHT = 11
-T_WIDTH = 70
+# Tableau window pos
+T_X = LEFT_MARGIN
+T_Y = 150
 
-count_x = 30
-for i in range(7):  # max no. of cols
-    if i != 0:
-        count_x += T_WIDTH
-    count_y = 150
-    for j in range(28):  # max no. of rows
-        # Generate rect for each Tableau position
-        TABS[i, j] = pg.Rect(count_x, count_y, 63, T_HEIGHT)
-        count_y += T_HEIGHT
+# Tableau cell dimensions
+CELL_HEIGHT = 11
+CELL_WIDTH = 70
+
+# Dict of Tableau positions
+TABS = {(col, row): pg.Rect(i * CELL_WIDTH + T_X,
+                            j * CELL_HEIGHT + T_Y,
+                            CARD_WIDTH, CELL_HEIGHT)
+        for i, col in enumerate(T_COLS)
+        for j, row in enumerate(T_ROWS)}
 
 
 # Returns the window's (x, y) position
-def win_pos(t_coordinates: (int, int)):
-    x, y = t_coordinates
-    return (x * T_WIDTH) + 30, \
-           (y * T_HEIGHT) + 150
+def win_pos(t_pos: (int, int)):
+    x, y = t_pos
+    return (x * CELL_WIDTH) + T_X, \
+           (y * CELL_HEIGHT) + T_Y
 
 
-# Main window display function. Called within game-loop
+# ------------------------------------------------- DISPLAY LOOP ---------------------------------------------------
+# Gets called inside game-loop
 def display_win(dealer, hand, event, area, cell, timer, sfx):
     mx, my = pg.mouse.get_pos()
     loc = (mx, my)
     d = dealer
 
+    card_back = d.deck.card_back_img
+    card_faces = d.deck.card_img
+
     # Paint background/foundation slots
-    WIN.fill('#008000')
+    WIN.fill(COLOR_BG)
     f_rect = [T1, T2, T3, T4]
-    for rect in f_rect:
-        pg.draw.rect(WIN, '#007000', rect)
-    pg.draw.rect(WIN, '#007000', STOCK_AREA)
+    for r in f_rect:
+        pg.draw.rect(WIN, COLOR_BG2, r)
+    pg.draw.rect(WIN, COLOR_BG2, AREA_STOCK)
 
     # Sound button
     if sfx:
@@ -104,12 +116,12 @@ def display_win(dealer, hand, event, area, cell, timer, sfx):
         WIN.blit(BTN_SOUND_OFF, BTN_SOUND_OFF_POS)
 
     # Timer and move count
-    moves = FONT.render('Moves ' + str(d.moves), True, T_COLOR)
-    WIN.blit(moves, (150, 12, 50, 50))
-    WIN.blit(timer, (30, 12, 50, 50))
+    moves = LB.render('Moves ' + str(d.moves), True, T_COLOR)
+    WIN.blit(moves, AREA_MOVES_LB)
+    WIN.blit(timer, (LEFT_MARGIN, 12, 50, 50))
 
     # Load cards currently in play
-    cards_tableau = [(d.deck.card_img[card], pos)
+    cards_tableau = [(card_faces[card], pos)
                      for pos, card in hand.items()
                      if card]
 
@@ -122,75 +134,95 @@ def display_win(dealer, hand, event, area, cell, timer, sfx):
         WIN.blit(BTN_RESTOCK, BTN_RESTOCK_POS)
 
     else:
-        for n, card in enumerate(d.get_stock()):
-            if n <= MAX_STACK_HEIGHT:
-                WIN.blit(CARD_BACK, (STOCK_AREA[0] + n,
-                                     STOCK_AREA[1] - n))
+        for i, card in enumerate(d.get_stock()):
+            if i <= STACK_LIMIT:
+                WIN.blit(card_back, (AREA_STOCK[0] + i,
+                                     AREA_STOCK[1] - i))
 
     # Display waste pile (top/current)
-    pos = 0
+    x = 0
     if d.check_waste():
-        for n, card in enumerate(d.get_waste()):
-            WIN.blit(CARD_BACK, (WASTE_AREA[0] + n, WASTE_AREA[1] - n))
-            pos = n
-            if n == MAX_STACK_HEIGHT:
+        for i, card in enumerate(d.get_waste()):
+            WIN.blit(card_back, (AREA_WASTE[0] + i,
+                                 AREA_WASTE[1] - i))
+            x = i
+            if i == STACK_LIMIT:
                 break
     c = d.look_current_stock()
 
     if c:
-        surf = d.deck.card_img[c]
-        if c != d.current:
-            WIN.blit(surf, (CURRENT_STOCK_AREA[0] + pos if pos else CURRENT_STOCK_AREA[0],
-                            CURRENT_STOCK_AREA[1] - pos if pos else CURRENT_STOCK_AREA[1]))
+        surf = card_faces[c]
+        if c != d.holding:
+            WIN.blit(surf, (AREA_CURRENT_STOCK[0] + x if x
+                            else AREA_CURRENT_STOCK[0],
+                            AREA_CURRENT_STOCK[1] - x if x
+                            else AREA_CURRENT_STOCK[1]))
 
     # Display foundation
-    x_pos = 30
-    for n, card in enumerate(d.current_foundation()):
-        if n != 0:
-            x_pos += 70
-
+    step = 70
+    for i, card in enumerate(d.current_foundation()):
         if card:
-            surf = d.deck.card_img[card]
-            WIN.blit(surf, (x_pos, 40))
+            surf = card_faces[card]
+            WIN.blit(surf, (i * step + LEFT_MARGIN, TOP_MARGIN))
 
     # Draw cards in play onto tableau
     for card, pos in cards_tableau:
-        if d.current \
-                and d.current_pos != CURRENT_STOCK \
-                and d.current_pos != FOUNDATION:
+        if d.holding \
+                and d.origin != CURRENT_STOCK \
+                and d.origin != FOUNDATION:
 
-            if d.current_pos != pos:
+            if d.origin != pos:
                 if not d.in_tail(pos):
                     WIN.blit(card, win_pos(pos))
 
             # Face-down card display
             if pos in d.face_down:
-                WIN.blit(CARD_BACK, win_pos(pos))
+                WIN.blit(card_back, win_pos(pos))
 
         else:
             WIN.blit(card, win_pos(pos))
             if pos in d.face_down:
-                WIN.blit(CARD_BACK, win_pos(pos))
+                WIN.blit(card_back, win_pos(pos))
 
-    # Drawing card movements
-    if event == MOUSEBUTTONDOWN:
+    if event == MOUSEBUTTONDOWN:  # ---------------------------------- MOUSE DOWN ----------------------------------
+
+        # Picks up card from Tableau
         if area == TABLEAU:
-            c = d.get_card_from_tableau(d.current_pos)
-            if c in d.deck.card_img:
-                surf = d.deck.card_img[c]
-                WIN.blit(surf, loc)
+            if not d.holding:
 
-                # Set card tail if applicable
-                tail = d.get_cards_tail()
-                if tail:
-                    for n, c in enumerate(tail):
-                        surf = d.deck.card_img[c]
-                        WIN.blit(surf, (loc[0], loc[1] + 11 * (n + 1)))
+                # Find corresponding card
+                for i in range(8):
+                    pos = d.origin
+                    if pos:
+                        pos = (pos[0], pos[1] - i)
+                        if d.in_cells(pos):  # ** put in func below?
+                            c = d.get_card_tableau(pos)
 
+                            # Pick up/drag card
+                            if c in card_faces:
+                                surf = card_faces[c]
+                                WIN.blit(surf, loc)
+                            break
+
+            else:  # Card already in hand
+                # Keep holding
+                if d.holding in card_faces:
+                    surf = card_faces[d.holding]
+                    WIN.blit(surf, loc)
+
+            # Check/set card tail
+            tail = d.get_card_tail()
+            if tail:
+                for n, c in enumerate(tail):
+                    surf = card_faces[c]
+                    WIN.blit(surf, (loc[0], loc[1] + 11 * (n + 1)))
+
+        # Clicks on Stock
+        # (Stock does not include stock.current!)
         elif area == STOCK:
+            # clicks auto-complete button
             if d.check_auto_complete():
                 d.auto = True
-
             else:
                 if d.stock_is_empty() and sfx:
                     SFX_RESTOCK.play()
@@ -198,20 +230,20 @@ def display_win(dealer, hand, event, area, cell, timer, sfx):
                 # Draws new card
                 c = d.new_card()
                 if c:
-                    surf = d.deck.card_img[c]
-                    WIN.blit(surf, (CURRENT_STOCK_AREA[0] + 30,
-                                    CURRENT_STOCK_AREA[1] - 5))
+                    surf = card_faces[c]
+                    WIN.blit(surf, (AREA_CURRENT_STOCK[0] + 30,
+                                    AREA_CURRENT_STOCK[1] - 5))
 
         # Picks up card from top of stock pile
         elif area == CURRENT_STOCK:
             c = d.get_current_stock()
             if c:
-                surf = d.deck.card_img[c]
+                surf = card_faces[c]
                 WIN.blit(surf, loc)
 
         # Picks up card from foundation
         elif area == FOUNDATION:
-            if d.current_pos is None:
+            if d.origin is None:
                 c = None
                 slots = len(d.current_foundation())
                 if T1.collidepoint(loc):
@@ -227,49 +259,69 @@ def display_win(dealer, hand, event, area, cell, timer, sfx):
                     if slots > 3:
                         c = d.get_card_foundation(3)
                 if c:
-                    surf = d.deck.card_img[c]
+                    surf = card_faces[c]
                     WIN.blit(surf, loc)
             else:
-                if d.current:
-                    surf = d.deck.card_img[d.current]
+                if d.holding:
+                    surf = card_faces[d.holding]
                     WIN.blit(surf, loc)
 
-    # If a card is currently being held, an attempt will be made
-    # to insert the card into the area defined
-    elif event == MOUSEBUTTONUP:
+    elif event == MOUSEBUTTONUP:  # ----------------------------------- MOUSE UP -----------------------------------
+
+        #  Drops card in Foundation
         if area == FOUNDATION:
-            if d.current:
-                success = d.insert_into_foundation(d.current, d.current_pos)
+            if d.holding:
+                success = d.insert_foundation(d.holding, d.origin)
                 if success and sfx:
                     SFX_INSERT.play()
                 elif sfx:
                     SFX_ERROR.play()
 
+        # Drops card in Tableau
         elif area == TABLEAU:
-            success = d.move_to_tableau(d.current_pos, cell)
-            if success and sfx:
-                SFX_MOVE.play()
-                pass
-            elif d.current_pos == FOUNDATION and sfx:
-                d.insert_into_foundation(d.current, d.current_pos)
-                SFX_ERROR.play()
+            # Loop over previous cells in an attempt
+            # to locate a valid card
+            for i in range(8):
+                if cell:
+                    x = (cell[0], cell[1] - i)
 
-        elif d.current_pos == FOUNDATION:
-            d.insert_into_foundation(d.current, d.current_pos)
+                    # Attempt to insert card
+                    success = d.insert_tableau(d.origin, x)
+                    if success:
+                        if sfx:
+                            SFX_MOVE.play()
+                            break
+
+                    elif d.origin != FOUNDATION:
+                        if d.in_cells(x):
+                            break
+
+                    elif i == 7:  # invalid and origin == foundation
+                        # Return card to foundation
+                        d.insert_foundation(d.holding, d.origin)
+                        if sfx:
+                            SFX_ERROR.play()
+
+        # Return card to Foundation
+        # if dropped in Waste/Stock area
+        elif d.origin == FOUNDATION:
+            d.insert_foundation(d.holding, d.origin)
             if sfx:
                 SFX_INSERT.play()
 
-        d.current = None
-        d.current_pos = None
+        d.holding = None
+        d.origin = None
 
+    # Auto-complete
     if d.auto:
-        # Activate auto complete function
         d.auto_complete(cards_tableau)
 
     pg.display.update()
 
 
-def main():
+# -------------------------------------------------- GAME-LOOP -----------------------------------------------------
+
+def play():
     clock = pg.time.Clock()
     playing = True
     sfx = True
@@ -283,57 +335,69 @@ def main():
     timer_event = pg.USEREVENT + 1
     pg.time.set_timer(timer_event, time_delay)
 
-    timer = FONT.render('Time 00:00', True, T_COLOR)
-    FONT.render('Moves 0', True, T_COLOR)
+    timer = LB.render('Time 00:00', True, T_COLOR)
+    LB.render('Moves 0', True, T_COLOR)
 
     dealer = Dealer()
     hand = dealer.deal()
 
-    # Game loop
+    # GAME-LOOP
     while playing:
         clock.tick(60)
 
+        # Check for user input
         for e in pg.event.get():
             if e.type == pg.QUIT:
                 playing = False
 
+            # Mouse click
             if e.type == MOUSEBUTTONDOWN:
                 if e.button == 1:
                     area = None
                     event = e.type
 
-                    if STOCK_AREA.collidepoint(e.pos):
-                        area = STOCK
-                    elif CURRENT_STOCK_AREA.collidepoint(e.pos):
-                        area = CURRENT_STOCK
-                    elif FOUNDATION_AREA.collidepoint(e.pos):
-                        area = FOUNDATION
-                    elif TABLEAU_AREA.collidepoint(e.pos):
+                    if AREA_TABLEAU.collidepoint(e.pos):
                         area = TABLEAU
+
                         for k, v in TABS.items():
                             if v.collidepoint(e.pos):
-                                dealer.current_pos = k
-                    elif SOUND_AREA.collidepoint(e.pos):
+                                dealer.origin = k  # **
+
+                    elif AREA_CURRENT_STOCK.collidepoint(e.pos):
+                        area = CURRENT_STOCK
+
+                    elif AREA_FOUNDATION.collidepoint(e.pos):
+                        area = FOUNDATION
+
+                    elif AREA_STOCK.collidepoint(e.pos):
+                        area = STOCK
+
+                    elif AREA_SOUND.collidepoint(e.pos):
                         sfx = not sfx
 
+            # Mouse drop
             if e.type == MOUSEBUTTONUP:
                 if e.button == 1:
                     event = e.type
                     area = None
                     cell = None
 
-                    if FOUNDATION_AREA.collidepoint(e.pos):
-                        area = FOUNDATION
-                    elif TABLEAU_AREA.collidepoint(e.pos):
+                    if AREA_TABLEAU.collidepoint(e.pos):
                         area = TABLEAU
                         for k, v in TABS.items():
                             if v.collidepoint(e.pos):
                                 cell = k
-                    elif CURRENT_STOCK_AREA.collidepoint(e.pos):
+
+                    elif AREA_CURRENT_STOCK.collidepoint(e.pos):
                         area = CURRENT_STOCK
-                    elif STOCK_AREA.collidepoint(e.pos):
+
+                    elif AREA_FOUNDATION.collidepoint(e.pos):
+                        area = FOUNDATION
+
+                    elif AREA_STOCK.collidepoint(e.pos):
                         area = STOCK
 
+            # Key press
             if e.type == pg.KEYDOWN:
                 if e.key == pg.K_n:
                     if sfx:
@@ -346,30 +410,32 @@ def main():
                 if e.key == pg.K_z:
                     pass
 
+            # Timer config
             elif e.type == timer_event:
                 if dealer.check_win():
-                    pass
+                    pass  # **
                 elif dealer.new_game:
-                    timer = FONT.render('Time 00:00', True, T_COLOR)
-                else:
+                    # Reset timer
+                    timer = LB.render('Time 00:00', True, T_COLOR)
+                else:  # Continue timer +1 seconds
                     seconds += 1
                     if seconds == 60:
                         seconds = 0
                         mins += 1
 
-                    if mins >= 10:
-                        timer = FONT.render('Time +9:59', True, T_COLOR)
+                    if mins >= 10:  # Time limit reached
+                        timer = LB.render('Time +9:59', True, T_COLOR)
                     else:
-                        timer = FONT.render((
+                        timer = LB.render((
                             'Time 0' + str(mins) + ':' + '0' + str(seconds)
                             if seconds < 10
                             else 'Time 0' + str(mins) + ':' + str(seconds)
-                        ),
-                            True, T_COLOR)
+                        ), True, T_COLOR)
 
         # Refresh window display
         display_win(dealer, hand, event, area, cell, timer, sfx)
 
+        # Single card flip/drop per mouse click
         if event == MOUSEBUTTONUP or area == STOCK:
             event = None
 
@@ -377,7 +443,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
-
-
-# <a href="https://www.flaticon.com/free-icons/solitaire" title="solitaire icons">Solitaire icons created by Febrian Hidayat - Flaticon</a>
+    play()
