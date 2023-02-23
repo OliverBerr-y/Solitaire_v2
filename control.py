@@ -1,15 +1,8 @@
+from constants import FACE_UP_STOCK, FOUNDATION
 from playing_cards import Deck, Card
-from board import Tableau, Stock, Foundation, \
-    T_COLS, T_ROWS
-
-# Constants
-CURRENT_STOCK = 'current_stock'
-FOUNDATION = 'foundation'
-TABLEAU = 'tableau'
-STOCK = 'stock'
+from board import Tableau, Stock, Foundation
 
 
-# Handles solitaire.py and board.py interactions
 class Dealer:
     def __init__(self):
         self._deck = Deck()
@@ -55,16 +48,16 @@ class Dealer:
     def get_stock(self):
         return self._stock.cards.cards
 
-    def look_current_stock(self):
+    def current_stock(self):
         return self._stock.current
 
-    def get_current_stock(self):
+    def pick_up_current_stock(self):
         if self._stock.current:
             self.holding = self._stock.current
-            self.origin = CURRENT_STOCK
+            self.origin = FACE_UP_STOCK
         return self._stock.current
 
-    def get_card_tableau(self, pos):
+    def pick_up_tableau(self, pos):
         cells = self._tableau.cells
 
         if pos and pos not in self.face_down:
@@ -83,11 +76,11 @@ class Dealer:
                 return True
         return False
 
-    def insert_tableau(self, origin, dest):
+    def drop_tableau(self, origin, dest):
         if origin == FOUNDATION:
             success = self.move_from_alt(self.holding, dest)
 
-        elif origin == CURRENT_STOCK:
+        elif origin == FACE_UP_STOCK:
             success = self.move_from_alt(self.holding, dest)
             if success:
                 self._stock.current = self._stock.waste.get_last()
@@ -156,12 +149,12 @@ class Dealer:
     def current_foundation(self):
         return self._foundation.look_top_cards()
 
-    def get_card_foundation(self, idx: int):
+    def pick_up_foundation(self, idx: int):
         self.origin = FOUNDATION
         self.holding = self._foundation.pop(idx)
         return self.holding
 
-    def insert_foundation(self, card, origin):
+    def drop_foundation(self, card, origin):
         self.holding = None
         self.origin = None
 
@@ -173,7 +166,7 @@ class Dealer:
                 if origin == FOUNDATION:
                     pass
 
-                elif origin == CURRENT_STOCK:
+                elif origin == FACE_UP_STOCK:
                     self._stock.current = self._stock.waste.get_last()
 
                 else:
@@ -232,12 +225,12 @@ class Dealer:
 
         for card, pos in remaining:
 
-            if self.get_current_stock():
-                self.insert_foundation(self.get_current_stock(), self.origin)
+            if self.pick_up_current_stock():
+                self.drop_foundation(self.pick_up_current_stock(), self.origin)
 
             if pos in t.cells and \
                     len(self.set_tail(pos[0], pos[1])) == 0:
-                if self.insert_foundation(t.cells[pos], pos):
+                if self.drop_foundation(t.cells[pos], pos):
                     t.cells[pos] = 0
                     return card
                 else:

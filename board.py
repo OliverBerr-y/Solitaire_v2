@@ -1,7 +1,5 @@
+from constants import T_COLS, T_ROWS
 from playing_cards import Card
-
-T_ROWS = range(28)
-T_COLS = range(7)
 
 
 class Tableau:
@@ -40,8 +38,8 @@ class Tableau:
 
 
 # The Foundation contains four stacks of cards (each starting empty).
-# The order in which card suits sit in the Foundation depends on the
-# order they were placed into it.
+# The order in which card suits sit in the Foundation is tethered to
+# the order in which they were originally placed into it.
 class Foundation:
     def __init__(self):
         self._stacks = {'diamonds': CardStack(), 'hearts': CardStack(),
